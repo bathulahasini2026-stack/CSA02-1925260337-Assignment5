@@ -1,0 +1,27 @@
+A5.1 TEXT DONOR FILE AND BINARY STOCK FILE
+DONOR TEXT FORMAT – one donor per line:
+fprintf(fp, "%d|%s|%s|%d|%s|%02d-%02d-%04d\n", id, name, group,
+        age, phone, day, month, year);
+Text is human-readable, easy to inspect and more portable across machines. Validate and escape delimiter characters in names, and use fgets plus parsing rather than unsafe unbounded input.
+
+STOCK BINARY FORMAT:
+typedef struct { int group_code; int units; } Stock;
+fwrite(stock, sizeof *stock, count, fp);
+Binary fixed-size records are compact and support direct record positioning with fseek. Binary files may be machine/compiler dependent because of integer size, byte order and structure padding; use a defined serialization format if portability is required.
+
+A5.2 UPDATE ONE BINARY RECORD PSEUDOCODE
+UPDATE_STOCK_FILE(fp, index, new_units)
+    IF fp is NULL OR index < 0 THEN RETURN FAILURE
+    IF FSEEK(fp, index × SIZEOF(Stock), SEEK_SET) fails THEN RETURN FAILURE
+    IF FREAD(record, SIZEOF(Stock), 1, fp) != 1 THEN RETURN FAILURE
+    record.units ← new_units
+    IF FSEEK(fp, -SIZEOF(Stock), SEEK_CUR) fails THEN RETURN FAILURE
+    IF FWRITE(record, SIZEOF(Stock), 1, fp) != 1 THEN RETURN FAILURE
+    IF FFLUSH(fp) fails THEN RETURN FAILURE
+    RETURN SUCCESS
+
+Text files have variable-length records. Changing one number may change line length and shift every following byte, so a simple fixed offset is not reliable. A text update normally reads records, changes the target and rewrites the file (often through a temporary file).
+
+
+ALTERNATIVE – REWRITE TEXT FILE
+Read all n records, update the matching group, write all n records to a replacement file, then replace the old file after successful completion. This is O(n) record processing per update and uses O(n) memory if all records are held at once (or O(1) record memory with a streaming temporary-file rewrite). Binary in-place update is O(1) record access when the index is known. Text files are usually larger due to digit separators and formatting; binary records are compact but less portable.
