@@ -1,0 +1,34 @@
+A3.1 POINTER EXPRESSIONS
+Given int stock[8] = {40,25,12,8,30,18,7,14}; int *p = stock;
+p + 3     : address of stock[3], not the stored value.
+*(p + 3)  : value at stock[3], which is 8.
+p[3]      : exactly equivalent to *(p + 3), value 8.
+*p++      : evaluates the current pointed value (40), then advances p to stock[1]. Post-increment applies to p, not to the value.
+
+MEMORY DIAGRAM (illustrative addresses)
+Index:       0       1       2       3       4       5       6       7
+Value:      40      25      12       8      30      18       7      14
+Address:   1000    1004    1008    1012    1016    1020    1024    1028
+p initially points to address 1000. p+3 points to 1012.
+
+A3.2 RETURN POINTER TO LOWEST STOCK
+int *lowest_stock(int stock[], size_t n) {
+    if (stock == NULL || n == 0) return NULL;
+    size_t min_index = 0;
+    for (size_t i = 1; i < n; ++i)
+        if (stock[i] < stock[min_index]) min_index = i;
+    return &stock[min_index];
+}
+The returned address points into the caller-owned array, so the caller may update *result. Returning the address of a local variable is invalid because the local object's lifetime ends when the function returns; the pointer would dangle.
+
+A3.3 COMMAND-LINE INTERFACE
+bloodbank find O+
+bloodbank issue A- 2
+Validate argc before reading argv. Accept only known blood-group strings. For find, require argc == 3; for issue, require argc == 4 and a positive integer quantity. On invalid input, print usage to stderr and return a non-zero exit status. Check strtol's end pointer and range rather than using atoi.
+
+
+ALTERNATIVE – RETURN INDEX
+size_t lowest_stock_index(const int stock[], size_t n); return SIZE_MAX if n==0.
+
+Caller: i=lowest_stock_index(stock,n); if(i!=SIZE_MAX) stock[i]=new_units.
+Both approaches use O(n) time and O(1) extra space. A pointer is direct and convenient while the array remains at the same allocation. An index survives reallocating/moving the array, provided the logical ordering is unchanged; a pointer becomes invalid if realloc moves storage.
