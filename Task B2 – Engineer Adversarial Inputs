@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
+int valid_group(const char *g) {
+    const char *groups[]={"A+","A-","B+","B-","AB+","AB-","O+","O-"};
+    for (size_t i=0;i<8;i++) if (strcmp(g,groups[i])==0) return 1;
+    return 0;
+}
+int main(int argc,char *argv[]) {
+    char name[16];
+    printf("Enter donor name (max 15 characters): ");
+    if (!fgets(name,sizeof name,stdin)) { puts("No input received"); return 1; }
+    name[strcspn(name,"\n")]='\0';
+    if (strchr(name,'\0') && strlen(name)==sizeof name-1) {
+        int ch; while ((ch=getchar())!='\n' && ch!=EOF) {}
+        puts("Name was longer than the buffer; safely truncated/rejected.");
+    }
+    printf("Accepted input buffer: %s\n",name);
+    if (argc==1) {
+        fprintf(stderr,"Usage: %s find GROUP | issue GROUP UNITS\n",argv[0]);
+    } else if (strcmp(argv[1],"find")==0 && argc==3 && valid_group(argv[2])) {
+        printf("Valid find request for %s\n",argv[2]);
+    } else if (strcmp(argv[1],"issue")==0 && argc==4 && valid_group(argv[2])) {
+        char *end=NULL; errno=0; long units=strtol(argv[3],&end,10);
+        if (errno || end==argv[3] || *end!='\0' || units<=0 || units>100000)
+            puts("Invalid unit count");
+        else printf("Valid issue request: %s %ld\n",argv[2],units);
+    } else {
+        puts("Invalid command or blood group");
+    }
+    FILE *fp=fopen("missing_bloodbank_demo.txt","r");
+    if (!fp) perror("fopen missing_bloodbank_demo.txt");
+    else fclose(fp);
+    return 0;
+}
+B2 PSEUDOCODE
+READ_NAME: use fgets into a fixed-size character array; if no input, report failure; remove newline; if buffer filled, drain remaining characters and report truncation/rejection.
+VALID_GROUP(g): compare g against the eight supported blood groups; return true on match.
+VALIDATE_COMMAND(argc,argv): if no arguments, print usage; for find require exactly GROUP; for issue require GROUP and a positive integer parsed by strtol; reject invalid groups, extra arguments and out-of-range quantities.
+CHECK_FILE: attempt fopen; if it fails, call perror and continue safely without dereferencing a null FILE pointer.
+Security note: an unbounded scanf into a small array can overflow it (undefined behaviour). Do not deliberately execute the unsafe version; demonstrate the contrast with bounded input and fgets.
+//SCREENSHOT:sandbox:/mnt/data/CO5_B2_Output_Screenshot.png
