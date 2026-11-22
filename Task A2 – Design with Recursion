@@ -1,0 +1,38 @@
+A2.1 RECURSIVE PSEUDOCODE
+DIGITAL_ROOT(n)
+    IF n < 0 THEN n ← ABS(n)
+    IF n < 10 THEN RETURN n                 // base case
+    sum ← 0
+    WHILE n > 0
+        sum ← sum + (n MOD 10)
+        n ← n DIV 10
+    RETURN DIGITAL_ROOT(sum)                // recursive case
+
+POWER_LINEAR(base, exp)
+    IF exp = 0 THEN RETURN 1                // base case
+    RETURN base × POWER_LINEAR(base, exp - 1)
+
+POWER_FAST(base, exp)
+    IF exp = 0 THEN RETURN 1                // base case
+    half ← POWER_FAST(base, exp DIV 2)      // exactly one recursive call
+    result ← half × half
+    IF exp MOD 2 = 1 THEN result ← result × base
+    RETURN result
+
+A2.2 CALL TRACES
+Digital root example: 9875 → 9+8+7+5=29 → 2+9=11 → 1+1=2.
+Call chain: digital_root(9875) → digital_root(29) → digital_root(11) → digital_root(2) → return 2.
+Deepest stack has four active calls (9875, 29, 11, 2).
+
+POWER_LINEAR(2,4): P(2,4) → 2×P(2,3) → 2×P(2,2) → 2×P(2,1) → 2×P(2,0) → 16.
+Calls recurrence: L(0)=1; L(n)=L(n−1)+1, so L(n)=n+1. Time O(n), stack O(n).
+
+POWER_FAST(2,10): P(2,10) → P(2,5) → P(2,2) → P(2,1) → P(2,0), then returns 1024.
+Calls recurrence: F(0)=1; F(n)=F(floor(n/2))+1, so F(n)=O(log n). Time O(log n), stack O(log n).
+
+A2.3 RECURSION RISKS
+Without a reachable base case, calls continue until stack resources are exhausted, commonly causing stack overflow. A loop is preferable when recursion depth may be large, when the recursive form gives no clarity benefit, or when constant stack use is important.
+
+
+ALTERNATIVE DIGITAL ROOT
+A loop repeatedly sums digits until one digit remains. For positive n, the direct digital-root formula is 0 when n=0, otherwise 1+(n−1) MOD 9. The loop is O(d) time for d digits and O(1) space; the formula is O(1) time and O(1) space. Recursive digit summing uses O(d) total digit work and O(log d) stack levels because each digit-sum reduces the number substantially.
