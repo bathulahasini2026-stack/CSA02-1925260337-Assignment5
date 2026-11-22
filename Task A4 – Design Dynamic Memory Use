@@ -1,0 +1,25 @@
+A4.1 GROWABLE DONOR LIST PSEUDOCODE
+ADD_DONOR(list, donor)
+    IF list.size = list.capacity THEN
+        IF list.capacity = 0 THEN new_capacity ← 2
+        ELSE new_capacity ← 2 × list.capacity
+        temp ← REALLOC(list.data, new_capacity × SIZEOF(Donor))
+        IF temp = NULL THEN
+            RETURN FAILURE                 // old list.data remains valid
+        END IF
+        list.data ← temp
+        list.capacity ← new_capacity
+    END IF
+    list.data[list.size] ← donor
+    list.size ← list.size + 1
+    RETURN SUCCESS
+
+Growth trace for 5 additions: capacity 2, 2, 4, 4, 8.
+
+A4.2 MEMORY ERRORS
+Memory leak: allocated memory is no longer reachable and is never freed. Example: overwriting list.data with a failed realloc result loses the original block. Prevention: assign realloc to a temporary pointer; free list.data once when finished.
+Dangling pointer: pointer refers to an object whose lifetime has ended. Example: returning &local_donor from a function. Prevention: return a pointer to caller-owned/dynamic storage, or return a structure by value.
+Double free: freeing the same allocation twice. Example: free(list.data) in both an error branch and common cleanup without setting it to NULL. Prevention: centralize cleanup and set freed pointers to NULL.
+
+ALTERNATIVE – FIXED INCREMENT OF 10
+Capacity becomes 10,20,30,... . With repeated growth by 10, the amount copied across n insertions is approximately 10+20+...+n = O(n²) in the worst case. Doubling copies a geometric series and gives O(n) total copying across n appends (amortized O(1) append). Fixed increments waste at most about 9 slots; doubling may leave nearly half the allocated capacity unused immediately after growth (less than the current size). Doubling is generally faster for large unpredictable data.
