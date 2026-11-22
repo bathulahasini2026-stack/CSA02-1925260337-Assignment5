@@ -1,0 +1,72 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+typedef struct { int group_code; int units; } Stock;
+static double elapsed(clock_t a,clock_t b){return (double)(b-a)/CLOCKS_PER_SEC;}
+int main(void) {
+    const int sizes[]={1000,10000,100000};
+    for (int k=0;k<3;k++) {
+        int n=sizes[k];
+        FILE *ft=fopen("donors_demo.txt","w");
+        FILE *fb=fopen("stock_demo.bin","wb");
+        if(!ft||!fb){perror("fopen");return 1;}
+        clock_t a=clock();
+        for(int i=0;i<n;i++) fprintf(ft,"%d|%d\n",i+1,(i%50)+1);
+        clock_t b=clock();
+        for(int i=0;i<n;i++){Stock s={i+1,(i%50)+1};fwrite(&s,sizeof s,1,fb);}
+        clock_t c=clock();
+        fclose(ft);fclose(fb);
+        long text_size,binary_size;
+        ft=fopen("donors_demo.txt","r");fb=fopen("stock_demo.bin","rb+");
+        fseek(ft,0,SEEK_END);text_size=ftell(ft);
+        fseek(fb,0,SEEK_END);binary_size=ftell(fb);
+        printf("n=%d text_bytes=%ld binary_bytes=%ld\n",n,text_size,binary_size);
+        printf("write_text=%.6fs write_binary=%.6fs\n",elapsed(a,b),elapsed(b,c));
+        rewind(ft);int id,units,read_count=0;char line[64];
+        clock_t d=clock();
+        while(fgets(line,sizeof line,ft)) if(sscanf(line,"%d|%d",&id,&units)==2)read_count++;
+        clock_t e=clock();
+        rewind(fb);Stock s;int binary_count=0;
+        while(fread(&s,sizeof s,1,fb)==1)binary_count++;
+        clock_t f=clock();
+        printf("read_text=%.6fs read_binary=%.6fs records=%d/%d\n",elapsed(d,e),elapsed(e,f),read_count,binary_count);
+        if(n==100000){
+            /* Update record 50,000 (zero-based index 49,999) in place. */
+            clock_t u=clock();
+            if(fseek(fb,49999L*(long)sizeof(Stock),SEEK_SET)!=0 || fread(&s,sizeof s,1,fb)!=1)return 2;
+            s.units=99;
+            if(fseek(fb,-(long)sizeof s,SEEK_CUR)!=0 || fwrite(&s,sizeof s,1,fb)!=1)return 3;
+            clock_t v=clock();
+            printf("binary_update_record_50000=%.6fs\n",elapsed(u,v));
+            /* Text equivalent: rewrite through a temporary file. */
+            FILE *tmp=fopen("donors_temp.txt","w");
+            if(!tmp)return 4;
+            rewind(ft);int row=0;
+            while(fgets(line,sizeof line,ft)){
+                row++;
+                if(row==50000)fprintf(tmp,"%d|99\n",row);
+                else fputs(line,tmp);
+            }
+            fclose(tmp);
+            clock_t w=clock();
+            printf("text_rewrite_update_record_50000=%.6fs\n",elapsed(v,w));
+        }
+        fclose(ft);fclose(fb);
+    }
+    remove("donors_demo.txt");remove("stock_demo.bin");remove("donors_temp.txt");
+    return 0;
+}
+B3 PSEUDOCODE
+FOR n IN {1000,10000,100000}:
+    OPEN text file and binary file; if either open fails, report error and stop.
+    WRITE n records to text using fprintf; measure elapsed CPU time.
+    WRITE n fixed-size Stock records to binary using fwrite; measure time.
+    CLOSE and reopen files; obtain byte sizes using fseek/ftell.
+    READ every text line using fgets and parse fields; count records and measure time.
+    READ every binary record using fread; count records and measure time.
+    IF n=100000: use fseek to record index 49999, fread one Stock, modify units, seek back and fwrite; measure.
+    For text update, copy all lines to a temporary text file while replacing line 50000; measure rewrite.
+    Print sizes, timings and record counts; close and remove temporary files.
+Compare O(n) full read/write with O(1) indexed binary update when record index is known. Timings are machine-dependent.
+//SCREENSHOT:sandbox:/mnt/data/CO5_B3_Output_Screenshot.png
