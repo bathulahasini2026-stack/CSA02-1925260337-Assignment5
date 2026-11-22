@@ -1,0 +1,59 @@
+A1.1 FUNCTION BREAKDOWN
+1. register_donor: validates and appends a donor record.
+2. check_eligibility: checks whether the donor meets the donation interval and other rules.
+3. find_donors: searches donors of a requested blood group.
+4. update_stock: adds or subtracts units for a blood group.
+5. save_donors / load_donors: writes and reads donor records in a text file.
+6. save_stock / load_stock: writes and reads fixed-size stock records in a binary file.
+7. issue_units: verifies stock, updates the stock record and reports success/failure.
+8. print_report: displays eligible donors and current stock.
+
+STRUCTURE CHART
+main
+├── register_donor
+│   ├── validate_donor
+│   └── append_donor
+├── find_donors
+│   └── check_eligibility
+├── issue_units
+│   └── update_stock
+├── save_donors / load_donors
+├── save_stock / load_stock
+└── print_report
+
+A1.2 FUNCTION PROTOTYPES AND PARAMETER DECISIONS
+typedef struct { int day, month, year; } Date;
+typedef struct {
+    int id; char name[60]; char group[4]; int age;
+    char phone[16]; Date last_donation;
+} Donor;
+typedef struct { char group[4]; int units; } Stock;
+
+int register_donor(DonorList *list, const Donor *candidate);
+int check_eligibility(const Donor *donor, Date today);
+int find_donors(const Donor *donors, size_t count, const char *group,
+                Date today, int *youngest_id, size_t *eligible_count);
+int update_stock(Stock *stock, size_t count, const char *group, int delta);
+int save_donors(const char *filename, const Donor *donors, size_t count);
+int load_donors(const char *filename, DonorList *list);
+int save_stock(const char *filename, const Stock *stock, size_t count);
+int load_stock(const char *filename, Stock *stock, size_t capacity, size_t *count);
+int issue_units(Stock *stock, size_t count, const char *group, int units);
+void print_report(const Donor *donors, size_t count, Date today);
+
+Pass small scalar values such as count, date fields and delta by value. Pass arrays/lists by pointer because C passes array addresses and copying a large collection is wasteful. Use const Donor * and const char * for input-only data so the function cannot modify it. Use DonorList * or Stock * when the function must update the caller's collection. Output parameters such as youngest_id and eligible_count are non-const pointers because the function writes results through them. File names are const char * because they are read-only strings.
+
+A1.3 RETURNING TWO RESULTS
+Alternative 1 – output pointers:
+int find_eligible(const Donor *d, size_t n, const char *group,
+                  Date today, size_t *count, int *youngest_id);
+The function writes the eligible count and youngest donor ID through the last two parameters. Return a status code to indicate success/failure.
+
+Alternative 2 – return a structure:
+typedef struct { size_t count; int youngest_id; int found; } EligibilityResult;
+EligibilityResult find_eligible_result(const Donor *d, size_t n,
+                                       const char *group, Date today);
+A structure groups related results and is convenient when more values are added. Pointer outputs avoid returning a larger object and are useful with status codes. Both scan n donors: O(n) time and O(1) extra space.
+
+GLOBAL-VARIABLE ALTERNATIVE
+A global DonorList and global result variables could be read or modified by functions without parameters. The asymptotic time and memory are unchanged: the same records are scanned and stored. However, functions become tightly coupled, tests depend on hidden state, reuse becomes harder, and simultaneous independent blood-bank instances become difficult. Parameter passing is preferred.
