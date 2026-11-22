@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct { int id; char group[4]; } Donor;
+typedef struct { Donor *data; int size, capacity; } DonorList;
+int add_donor(DonorList *list,int id,const char *group) {
+    if (!list || !group) return 0;
+    if (list->size==list->capacity) {
+        int new_capacity=(list->capacity==0)?2:list->capacity*2;
+        Donor *p=realloc(list->data,(size_t)new_capacity*sizeof *list->data);
+        if (p==NULL) return 0;
+        list->data=p;
+        list->capacity=new_capacity;
+    }
+    list->data[list->size].id=id;
+    strncpy(list->data[list->size].group,group,3);
+    list->data[list->size].group[3]='\0';
+    list->size++;
+    return 1;
+}
+int main(void) {
+    DonorList list={NULL,0,0};
+    const char *groups[]={"O+","A+","B-","AB+","O-"};
+    for(int i=0;i<5;i++){
+        if(!add_donor(&list,7001+i,groups[i])){
+            fprintf(stderr,"Memory allocation failed\n");free(list.data);return 1;
+        }
+        printf("added %d (%s): size = %d, capacity = %d\n",
+               list.data[i].id,list.data[i].group,list.size,list.capacity);
+    }
+    printf("allocated_bytes = %zu\n",(size_t)list.capacity*sizeof *list.data);
+    free(list.data);
+    list.data=NULL;list.size=0;list.capacity=0;
+    puts("memory released");
+    return 0;
+}
+B4 PSEUDOCODE
+INITIALIZE list.data=NULL, list.size=0, list.capacity=0.
+ADD_DONOR(list,id,group):
+    IF size=capacity:
+        new_capacity ← 2 if capacity=0 else capacity×2
+        temp ← realloc(data,new_capacity×SIZEOF(Donor))
+        IF temp=NULL: return failure without changing old data pointer
+        data←temp; capacity←new_capacity
+    Store id and a bounded, null-terminated blood group at data[size].
+    size←size+1; return success.
+MAIN: add five sample donors; after each addition print size and capacity; report allocated bytes; free data exactly once and clear fields.
+Production decision: the supplied demo struct contains only id and group. A real eligibility report must load complete donor fields (including last-donation date and age) and apply eligibility rules. Keep all donors in memory only if measured memory fits the operating budget; otherwise process batches or maintain a sorted ID-to-file-offset index.
+//SCREENSHOT:sandbox:/mnt/data/CO5_B4_Output_Screenshot.png
